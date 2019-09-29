@@ -10,8 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"contrib.go.opencensus.io/exporter/stackdriver"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/tommy-sho/opencensus-tracing/user_service/config"
 	proto "github.com/tommy-sho/opencensus-tracing/user_service/genproto"
 	"github.com/tommy-sho/opencensus-tracing/user_service/service"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	health "google.golang.org/grpc/health/grpc_health_v1"
@@ -24,6 +28,17 @@ const (
 )
 
 func main() {
+	var conf config.Config
+	err := envconfig.Process("", &conf)
+
+	exporter, err := stackdriver.NewExporter(stackdriver.Options{
+		ProjectID: conf.GetGoogleCloudProject(),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	trace.RegisterExporter(exporter)
+
 	s := service.NewUserService()
 	server := grpc.NewServer()
 	proto.RegisterUserServiceServer(server, s)
